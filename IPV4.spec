@@ -5,7 +5,7 @@ a = Analysis(
     ['IPV4.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('ipv4.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -37,5 +37,5 @@ exe = EXE(
     entitlements_file=None,
     uac_admin=True,          # netsh needs admin; prompt for UAC at launch
     version='version_info.txt',
-    # icon='ipv4.ico',       # drop an .ico in this folder and uncomment
+    icon='ipv4.ico',         # regenerate with: python make_icon.py
 )

@@ -3,3 +3,5 @@ __pycache__/
 build/
 dist/
 *.exe
+.iconlibs/
+icon_preview.png

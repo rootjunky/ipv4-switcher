@@ -1,3 +1,5 @@
+<img src="ipv4.png" width="96" alt="IPv4 Switcher icon">
+
 # IPv4 Switcher
 
 Windows GUI for switching a network adapter between DHCP and a static IPv4 address.
@@ -23,5 +25,6 @@ Windows GUI for switching a network adapter between DHCP and a static IPv4 addre
 Grab `IPV4Switcher.exe` from the [Releases](../../releases) page.
 
 ## Changelog
+- **2.1.0** New app icon (exe, title bar, taskbar). `make_icon.py` regenerates `ipv4.ico` (needs `pip install pillow`).
 - **2.0.1** Fix: adapter details (IP, mask, gateway, DNS, MAC, speed) showed "—" because PowerShell's progress output on stderr broke the JSON parse. The status bar now explains it if the detailed query fails.
 - **2.0.0** Rewrite: themed UI, profiles, validation, background tasks, UAC elevation.

@@ -17,7 +17,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 APP_NAME = "IPv4 Switcher"
-VERSION = "2.0.1"
+VERSION = "2.1.0"
 
 # Default values for the static fields (still editable).
 DEFAULTS = {
@@ -98,6 +98,28 @@ def style_titlebar(window, dark):
                 break
     except Exception:
         pass
+
+
+def resource_path(name):
+    """Path to a bundled file, both from source and inside a PyInstaller exe."""
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, name)
+
+
+def set_window_icon(window):
+    if not IS_WINDOWS:
+        return
+    try:
+        # Own taskbar identity, so Windows shows our icon instead of python.exe's.
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("RootJunky.IPv4Switcher")
+    except Exception:
+        pass
+    icon = resource_path("ipv4.ico")
+    if os.path.exists(icon):
+        try:
+            window.iconbitmap(default=icon)  # default= also applies to dialogs
+        except tk.TclError:
+            pass
 
 
 def oem_encoding():
@@ -464,6 +486,7 @@ class App:
         self.admin = is_admin()
 
         root.title(APP_NAME)
+        set_window_icon(root)
         root.configure(bg=self.c["bg"])
         root.resizable(False, False)
         self._setup_style()
