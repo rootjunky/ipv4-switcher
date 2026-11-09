@@ -17,9 +17,9 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -46,7 +46,7 @@ jobs:
           $exe = Get-Item dist\IPV4Switcher.exe
           "{0:N0} bytes, version {1}" -f $exe.Length, $exe.VersionInfo.FileVersion
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: IPV4Switcher
           path: dist/IPV4Switcher.exe
