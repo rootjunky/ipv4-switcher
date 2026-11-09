@@ -68,7 +68,7 @@ def render(px):
 
     # Network glyph geometry.
     cx = n / 2
-    cy = n * (0.50 if small else 0.31)
+    cy = n * (0.50 if small else 0.665)
     r = n * (0.32 if small else 0.185)
     nodes = [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)]
     line_w = int((22 if small else 11) * k)
@@ -107,7 +107,7 @@ def render(px):
                 break
             size -= 2
         tw, th = box[2] - box[0], box[3] - box[1]
-        tx, ty = (n - tw) / 2 - box[0], n * 0.745 - th / 2 - box[1]
+        tx, ty = (n - tw) / 2 - box[0], n * 0.24 - th / 2 - box[1]
         # gradient-filled text
         fill = gradient((n, n), CYAN, BLUE, diagonal=True).convert("RGBA")
         tmask = Image.new("L", (n, n), 0)
