@@ -20,6 +20,8 @@ Windows GUI for switching a network adapter between DHCP and a static IPv4 addre
     pip install pyinstaller
     pyinstaller --clean IPV4.spec  # -> dist\IPV4Switcher.exe (requests admin on launch)
 
+GitHub Actions also builds the exe on every push to `main` (see the **Actions** tab, artifact `IPV4Switcher`). Pushing a `vX.Y.Z` tag attaches the exe to that release.
+
 `IPV4_original.py` is the v1 script, kept for reference.
 
 ## Download

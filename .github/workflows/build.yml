@@ -1,0 +1,66 @@
+# Builds IPV4Switcher.exe on a Windows runner.
+# - Every push to main (and manual runs): exe is saved as a downloadable workflow artifact.
+# - Pushing a tag like v2.3.0: exe is also attached to the GitHub release for that tag
+#   (the release is created if it doesn't exist yet).
+name: Build exe
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Check version numbers match
+        shell: pwsh
+        run: |
+          $app = (Select-String -Path IPV4.py -Pattern '^VERSION = "(.+)"').Matches[0].Groups[1].Value
+          $info = (Select-String -Path version_info.txt -Pattern "'FileVersion', '(.+)'").Matches[0].Groups[1].Value
+          if ($app -ne $info) { throw "IPV4.py says $app but version_info.txt says $info" }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$app") {
+            throw "Tag $env:GITHUB_REF_NAME doesn't match app version v$app"
+          }
+          "Version $app"
+
+      - name: Build
+        run: python -m PyInstaller --clean --noconfirm IPV4.spec
+
+      - name: Smoke test (exe exists)
+        shell: pwsh
+        run: |
+          $exe = Get-Item dist\IPV4Switcher.exe
+          "{0:N0} bytes, version {1}" -f $exe.Length, $exe.VersionInfo.FileVersion
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IPV4Switcher
+          path: dist/IPV4Switcher.exe
+          retention-days: 30
+
+      - name: Attach to release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --title "IPv4 Switcher $tag" --generate-notes
+          }
+          gh release upload $tag dist\IPV4Switcher.exe --clobber
