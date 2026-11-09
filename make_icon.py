@@ -68,12 +68,12 @@ def render(px):
 
     # Network glyph geometry.
     cx = n / 2
-    cy = n * (0.50 if small else 0.40)
-    r = n * (0.32 if small else 0.255)
+    cy = n * (0.50 if small else 0.31)
+    r = n * (0.32 if small else 0.185)
     nodes = [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)]
-    line_w = int((22 if small else 13) * k)
-    node_r = (30 if small else 21) * k
-    hub_r = (36 if small else 27) * k
+    line_w = int((22 if small else 11) * k)
+    node_r = (30 if small else 17) * k
+    hub_r = (36 if small else 22) * k
 
     glyph = Image.new("RGBA", (n, n), (0, 0, 0, 0))
     g = ImageDraw.Draw(glyph)
@@ -98,11 +98,16 @@ def render(px):
 
     if not small:
         d = ImageDraw.Draw(tile)
-        f = font(int(58 * k))
         text = "IPv4"
-        box = d.textbbox((0, 0), text, font=f)
+        size = 96  # as big as fits inside the tile with a margin
+        while True:
+            f = font(int(size * k))
+            box = d.textbbox((0, 0), text, font=f)
+            if box[2] - box[0] <= n * 0.86 or size <= 40:
+                break
+            size -= 2
         tw, th = box[2] - box[0], box[3] - box[1]
-        tx, ty = (n - tw) / 2 - box[0], n * 0.79 - th / 2 - box[1]
+        tx, ty = (n - tw) / 2 - box[0], n * 0.745 - th / 2 - box[1]
         # gradient-filled text
         fill = gradient((n, n), CYAN, BLUE, diagonal=True).convert("RGBA")
         tmask = Image.new("L", (n, n), 0)
