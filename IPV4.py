@@ -17,7 +17,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 APP_NAME = "IPv4 Switcher"
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 
 # Default values for the static fields (still editable).
 DEFAULTS = {
@@ -98,6 +98,21 @@ def style_titlebar(window, dark):
                 break
     except Exception:
         pass
+
+
+def work_area(root):
+    """(left, top, width, height) of the usable desktop, excluding the taskbar."""
+    if IS_WINDOWS:
+        try:
+            class RECT(ctypes.Structure):
+                _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long),
+                            ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+            r = RECT()
+            if ctypes.windll.user32.SystemParametersInfoW(0x30, 0, ctypes.byref(r), 0):  # SPI_GETWORKAREA
+                return r.left, r.top, r.right - r.left, r.bottom - r.top
+        except Exception:
+            pass
+    return 0, 0, root.winfo_screenwidth(), root.winfo_screenheight() - 60
 
 
 def resource_path(name):
@@ -488,10 +503,10 @@ class App:
         root.title(APP_NAME)
         set_window_icon(root)
         root.configure(bg=self.c["bg"])
-        root.resizable(False, False)
         self._setup_style()
         self._build()
         self._set_mode("dhcp")
+        self._size_window()
         style_titlebar(root, self.dark)
 
         root.bind("<F5>", lambda e: self.refresh())
@@ -569,6 +584,12 @@ class App:
         self.root.option_add("*TCombobox*Listbox.font", base)
         self.root.option_add("*TCombobox*Listbox.borderWidth", 0)
 
+        for orient in ("Vertical", "Horizontal"):
+            s.configure(f"{orient}.TScrollbar", background=c["card2"], troughcolor=c["bg"],
+                        bordercolor=c["bg"], lightcolor=c["card2"], darkcolor=c["card2"],
+                        arrowcolor=c["muted"], gripcount=0)
+            s.map(f"{orient}.TScrollbar", background=[("pressed", c["border"]), ("active", c["hover"])])
+
         s.configure("Horizontal.TProgressbar", background=c["accent"], troughcolor=c["card"],
                     bordercolor=c["bg"], lightcolor=c["accent"], darkcolor=c["accent"], thickness=4)
 
@@ -586,8 +607,25 @@ class App:
 
     def _build(self):
         c = self.c
-        main = ttk.Frame(self.root, padding=(18, 16, 18, 10))
-        main.pack(fill="both", expand=True)
+        # Everything lives on a canvas so the window can be resized smaller than the
+        # content; scrollbars appear only when something doesn't fit.
+        outer = ttk.Frame(self.root)
+        outer.pack(fill="both", expand=True)
+        outer.rowconfigure(0, weight=1)
+        outer.columnconfigure(0, weight=1)
+        self.canvas = tk.Canvas(outer, bg=c["bg"], highlightthickness=0, borderwidth=0)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        self.vbar = ttk.Scrollbar(outer, orient="vertical", command=self.canvas.yview)
+        self.hbar = ttk.Scrollbar(outer, orient="horizontal", command=self.canvas.xview)
+        self.canvas.configure(yscrollcommand=self.vbar.set, xscrollcommand=self.hbar.set)
+        main = ttk.Frame(self.canvas, padding=(18, 16, 18, 10))
+        self.content = main
+        self.content_id = self.canvas.create_window(0, 0, window=main, anchor="nw")
+        self._fit_pending = False
+        main.bind("<Configure>", lambda e: self._schedule_fit())
+        self.canvas.bind("<Configure>", lambda e: self._schedule_fit())
+        for seq in ("<MouseWheel>", "<Shift-MouseWheel>", "<Button-4>", "<Button-5>"):
+            self.root.bind_all(seq, self._on_wheel)
 
         # Header
         head = ttk.Frame(main)
@@ -689,6 +727,8 @@ class App:
         # Status bar
         status = ttk.Frame(main)
         status.pack(fill="x")
+        status.bind("<Configure>", lambda e: self.status_label.configure(
+            wraplength=max(200, e.width - 140)))
         self.progress = ttk.Progressbar(status, mode="indeterminate", length=120)
         self.status_var = tk.StringVar(value="Ready")
         self.status_label = ttk.Label(status, textvariable=self.status_var, style="Status.TLabel",
@@ -697,6 +737,69 @@ class App:
 
         self.action_buttons = [self.apply_btn, self.renew_btn, self.ping_btn,
                                self.refresh_btn, self.use_current_btn]
+
+    # ---- window size / scrolling ----------------------------------------- #
+
+    def _size_window(self):
+        """Open at the natural size, but never bigger than the screen's work area."""
+        root = self.root
+        root.update_idletasks()
+        w, h = self.content.winfo_reqwidth(), self.content.winfo_reqheight()
+        left, top, aw, ah = work_area(root)
+        scale = root.winfo_fpixels("1i") / 96
+        chrome = int(45 * scale)  # title bar and window borders
+        max_w, max_h = aw - int(16 * scale), ah - chrome - int(8 * scale)
+        if h > max_h:
+            w += self.vbar.winfo_reqwidth()
+        if w > max_w:
+            h += self.hbar.winfo_reqheight()
+        w, h = max(min(w, max_w), 200), max(min(h, max_h), 150)
+        x = left + max((aw - w) // 2, 0)
+        y = top + max((ah - h - chrome) // 2, 0)
+        root.geometry(f"{w}x{h}+{x}+{y}")
+        root.minsize(min(w, int(320 * scale)), min(h, int(200 * scale)))
+        root.resizable(True, True)
+
+    def _schedule_fit(self):
+        if not self._fit_pending:
+            self._fit_pending = True
+            self.root.after_idle(self._fit_content)
+
+    def _fit_content(self):
+        self._fit_pending = False
+        cw, ch = self.canvas.winfo_width(), self.canvas.winfo_height()
+        if cw <= 1 or ch <= 1:
+            return
+        rw, rh = self.content.winfo_reqwidth(), self.content.winfo_reqheight()
+        w, h = max(cw, rw), max(ch, rh)
+        self.canvas.itemconfigure(self.content_id, width=w, height=h)
+        self.canvas.configure(scrollregion=(0, 0, w, h))
+        for bar, needed, pos in ((self.vbar, rh > ch, {"row": 0, "column": 1, "sticky": "ns"}),
+                                 (self.hbar, rw > cw, {"row": 1, "column": 0, "sticky": "ew"})):
+            if needed and not bar.winfo_ismapped():
+                bar.grid(**pos)
+            elif not needed and bar.winfo_ismapped():
+                bar.grid_remove()
+
+    def _on_wheel(self, event):
+        widget = event.widget
+        # Leave combobox lists and dialogs alone; only scroll the main window.
+        if not isinstance(widget, tk.Misc) or isinstance(widget, ttk.Combobox):
+            return
+        try:
+            if widget.winfo_toplevel() is not self.root:
+                return
+        except (KeyError, tk.TclError):
+            return
+        if event.num == 4 or getattr(event, "delta", 0) > 0:
+            step = -1
+        else:
+            step = 1
+        horizontal = event.state & 0x1  # Shift held
+        bar, view = (self.hbar, self.canvas.xview_scroll) if horizontal else \
+                    (self.vbar, self.canvas.yview_scroll)
+        if bar.winfo_ismapped():
+            view(step * 3, "units")
 
     # ---- background tasks ------------------------------------------------- #
 

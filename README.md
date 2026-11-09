@@ -6,6 +6,7 @@ Windows GUI for switching a network adapter between DHCP and a static IPv4 addre
 
 ## Features
 - Dark/light UI that follows the Windows theme (dark title bar, DPI aware)
+- Resizable window with scrollbars that appear only when the content doesn't fit
 - Shows the selected adapter's live status, mode, IP, mask, gateway, DNS, MAC, link speed
 - DHCP / Static toggle. Static fields default to mask `255.255.255.0`, gateway `192.168.1.1`, DNS `1.1.1.1`, and you can still edit them
 - CIDR input (`192.168.1.50/24` fills in the mask)
@@ -25,6 +26,7 @@ Windows GUI for switching a network adapter between DHCP and a static IPv4 addre
 Grab `IPV4Switcher.exe` from the [Releases](../../releases) page.
 
 ## Changelog
+- **2.2.0** Window is now resizable and scrolls when it doesn't fit. It opens sized to the screen's usable area, so it no longer runs off small or high-DPI screens.
 - **2.1.0** New app icon (exe, title bar, taskbar). `make_icon.py` regenerates `ipv4.ico` (needs `pip install pillow`).
 - **2.0.1** Fix: adapter details (IP, mask, gateway, DNS, MAC, speed) showed "—" because PowerShell's progress output on stderr broke the JSON parse. The status bar now explains it if the detailed query fails.
 - **2.0.0** Rewrite: themed UI, profiles, validation, background tasks, UAC elevation.
